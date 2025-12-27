@@ -1,0 +1,74 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  dates     String?
+  phoneNumber String?
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
+  signups   Signup[]
+  
+  isAdmin   Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Bald's"
+  fullAddress String
+  people    Person[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime // Store full date and time
+  location    String?
+  cost        Float?
+  maxPeople   Int?
+  venmoLink   String?  // Can be a full link or identifier
+  category    String?  // e.g. "Food", "Sport", "Trip"
+  icon        String?  // Emoji or icon name
+
+  signups     Signup[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Signup {
+  id         String   @id @default(uuid())
+  personId   String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  status     String   @default("CONFIRMED") // CONFIRMED, WAITLIST, CANCELLED
+  paid       Boolean  @default(false)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([personId, activityId])
+}
+
+model Setting {
+  id    String @id @default(uuid())
+  key   String @unique // e.g., "TRIP_START_DATE", "VENMO_USERNAME"
+  value String
+}

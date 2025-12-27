@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const rebeccas = await prisma.person.findMany({ where: { name: { contains: 'Rebecca' } } }); console.log('Rebeccas:', rebeccas); const beckys = await prisma.person.findMany({ where: { name: { contains: 'Becky' } } }); console.log('Beckys:', beckys); } main();
