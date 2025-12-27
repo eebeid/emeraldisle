@@ -126,12 +126,17 @@ export async function deleteActivity(id: string) {
 export async function createPerson(data: FormData) {
     const name = data.get('name') as string;
     const phoneNumber = data.get('phoneNumber') as string;
+    const startDateStr = data.get('startDate') as string;
+    const endDateStr = data.get('endDate') as string;
+
     if (!name) return;
 
     await prisma.person.create({
         data: {
             name,
-            phoneNumber
+            phoneNumber,
+            startDate: startDateStr ? new Date(startDateStr) : null,
+            endDate: endDateStr ? new Date(endDateStr) : null,
         }
     });
     revalidatePath('/');
@@ -142,7 +147,8 @@ export async function createPerson(data: FormData) {
 
 export async function updatePerson(id: string, data: FormData) {
     const name = data.get('name') as string;
-    const dates = data.get('dates') as string;
+    const startDateStr = data.get('startDate') as string;
+    const endDateStr = data.get('endDate') as string;
     const phoneNumber = data.get('phoneNumber') as string;
     const addressId = data.get('addressId') as string;
 
@@ -152,7 +158,8 @@ export async function updatePerson(id: string, data: FormData) {
         where: { id },
         data: {
             name,
-            dates,
+            startDate: startDateStr ? new Date(startDateStr) : null,
+            endDate: endDateStr ? new Date(endDateStr) : null,
             phoneNumber,
             addressId: addressId || null
         }

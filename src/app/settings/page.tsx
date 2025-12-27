@@ -82,6 +82,16 @@ export default async function SettingsPage({
                             <label>Name</label>
                             <input name="name" required placeholder="Name" />
                         </div>
+                        <div className={styles.row}>
+                            <div className={styles.formGroup}>
+                                <label>Start Date</label>
+                                <input type="date" name="startDate" />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>End Date</label>
+                                <input type="date" name="endDate" />
+                            </div>
+                        </div>
                         <div className={styles.formGroup}>
                             <label>Phone Number</label>
                             <input name="phoneNumber" placeholder="e.g. 555-123-4567" />

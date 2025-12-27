@@ -1,0 +1,103 @@
+.container {
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.dayName {
+    text-align: center;
+    font-weight: bold;
+    color: var(--foreground-rgb);
+    padding: 0.5rem;
+    opacity: 0.7;
+}
+
+.dayCell {
+    background: rgba(255, 255, 255, 0.05);
+    /* Glass effect base */
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-height: 120px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.dayCell:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+}
+
+.currentMonth {
+    background: rgba(255, 255, 255, 0.4);
+    /* Lighter for active days */
+}
+
+.otherMonth {
+    opacity: 0.4;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.dateNumber {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.event {
+    background: var(--card-bg);
+    border-left: 3px solid var(--primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.event:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.monthTitle {
+    grid-column: 1 / -1;
+    font-size: 1.5rem;
+    margin: 1rem 0;
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .calendarGrid {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dayName {
+        display: none;
+    }
+
+    .dayCell {
+        min-height: auto;
+    }
+
+    .otherMonth {
+        display: none;
+    }
+}

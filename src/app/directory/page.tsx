@@ -15,10 +15,14 @@ export default async function DirectoryPage() {
             <section>
                 <h2 className={styles.sectionTitle}>People</h2>
                 <div className={styles.grid}>
-                    {people.map(person => (
+                    {people.map((person: any) => (
                         <div key={person.id} className="card">
                             <h3>{person.name}</h3>
-                            <p className={styles.dates}>🗓 {person.dates || 'Dates not set'}</p>
+                            <p className={styles.dates}>
+                                🗓 {person.startDate && person.endDate
+                                    ? `${new Date(person.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(person.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                                    : 'Dates not set'}
+                            </p>
                             {person.address && (
                                 <p style={{ marginTop: '0.25rem', fontSize: '0.9rem' }}>
                                     📍 <a href={`https://maps.google.com/?q=${encodeURIComponent(person.address.fullAddress)}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
@@ -35,7 +39,7 @@ export default async function DirectoryPage() {
             <section>
                 <h2 className={styles.sectionTitle}>Houses</h2>
                 <div className={styles.grid}>
-                    {addresses.map(addr => (
+                    {addresses.map((addr: any) => (
                         <div key={addr.id} className="card">
                             <h3>{addr.name}</h3>
                             <p className={styles.address}>📍 <a href={`https://maps.google.com/?q=${encodeURIComponent(addr.fullAddress)}`} target="_blank" rel="noopener noreferrer">{addr.fullAddress}</a></p>

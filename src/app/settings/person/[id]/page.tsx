@@ -30,9 +30,15 @@ export default async function EditPersonPage({ params }: { params: { id: string 
                         <label>Phone Number</label>
                         <input name="phoneNumber" defaultValue={person.phoneNumber || ''} placeholder="e.g. 555-123-4567" />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label>Dates in Town</label>
-                        <input name="dates" defaultValue={person.dates || ''} placeholder="e.g. Dec 27 - Jan 2" />
+                    <div className={styles.row}>
+                        <div className={styles.formGroup}>
+                            <label>Start Date</label>
+                            <input type="date" name="startDate" defaultValue={person.startDate ? new Date(person.startDate).toISOString().split('T')[0] : ''} />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>End Date</label>
+                            <input type="date" name="endDate" defaultValue={person.endDate ? new Date(person.endDate).toISOString().split('T')[0] : ''} />
+                        </div>
                     </div>
                     <div className={styles.formGroup}>
                         <label>Address</label>

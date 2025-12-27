@@ -5,14 +5,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL") // Vercel Postgres
+  directUrl = env("POSTGRES_URL_NON_POOLING") // For migrations
 }
 
 model Person {
   id        String   @id @default(uuid())
   name      String   @unique
-  dates     String?
+  startDate DateTime?
+  endDate   DateTime?
   phoneNumber String?
   addressId String?
   address   Address? @relation(fields: [addressId], references: [id])

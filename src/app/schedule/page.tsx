@@ -1,7 +1,10 @@
 import prisma from '@/lib/prisma';
 import styles from './schedule.module.css';
 import { signupForActivity, cancelSignup } from '../actions';
+import { getTwoweekWeather, getWeatherIcon } from '@/lib/weather';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 function formatDate(date: Date) {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -28,6 +31,27 @@ export default async function SchedulePage({
         orderBy: { date: 'asc' },
         include: { signups: { include: { person: true } } }
     });
+
+    const weatherData = await getTwoweekWeather();
+    const weatherMap = new Map<string, { max: number; min: number; icon: string }>();
+
+    if (weatherData && weatherData.daily) {
+        weatherData.daily.time.forEach((t, i) => {
+            // Ensure date string matches formatDate(new Date(t)) format logic if possible, 
+            // or just match YYYY-MM-DD. 
+            // Our formatDate uses "Weekday, Month Day", so we need to map via Date object.
+
+            // Note: 't' from API is YYYY-MM-DD.
+            // Let's create a date object (noon to avoid timezone shift issues roughly)
+            const d = new Date(t + 'T12:00:00');
+            const dateKey = formatDate(d); // e.g. "Friday, December 26"
+            weatherMap.set(dateKey, {
+                max: Math.round(weatherData.daily.temperature_2m_max[i]),
+                min: Math.round(weatherData.daily.temperature_2m_min[i]),
+                icon: getWeatherIcon(weatherData.daily.weathercode[i])
+            });
+        });
+    }
 
     const people = await prisma.person.findMany({ orderBy: { name: 'asc' } });
 
@@ -60,8 +84,9 @@ export default async function SchedulePage({
                         </div>
                     </div>
                 ) : (
-                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.03)', borderRadius: '8px' }}>
-                        <p>Select your name on the <Link href="/" style={{ textDecoration: 'underline' }}>Home page</Link> to sign up for activities.</p>
+                    <div style={{ marginTop: '1rem', padding: '1.5rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px', color: '#92400e' }}>
+                        <p style={{ fontWeight: 500 }}>⚠️ You are not signed within a valid session.</p>
+                        <p style={{ marginTop: '0.5rem' }}>Please go to the <Link href="/" style={{ textDecoration: 'underline', fontWeight: 'bold' }}>Home page</Link> and select your name again to sign up for activities.</p>
                     </div>
                 )}
             </header>
@@ -73,7 +98,18 @@ export default async function SchedulePage({
                     {Object.entries(grouped).map(([date, dayActivities]: [string, any]) => (
                         <div key={date} className={styles.dayBlock}>
                             <div className={styles.dateHeader}>
-                                <h2>{date}</h2>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                    <h2>{date}</h2>
+                                    {weatherMap.get(date) && (
+                                        <div className="weather-badge" style={{ fontSize: '1rem', background: 'rgba(255,255,255,0.7)', padding: '0.3rem 0.6rem', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                                            <span style={{ fontSize: '1.4rem' }}>{weatherMap.get(date)?.icon}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                                                <span style={{ fontWeight: 'bold' }}>{weatherMap.get(date)?.max}°</span>
+                                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{weatherMap.get(date)?.min}°</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className={styles.events}>
                                 {dayActivities.map((activity: any) => {
@@ -143,6 +179,7 @@ export default async function SchedulePage({
                     <div className={styles.chart}>
                         {(() => {
                             const maxAttendees = Math.max(...activities.map((a: any) => a.signups.length), 1);
+                            const totalPeopleCount = people.length || 1;
 
                             // Sort by most attended, then chronologically
                             const chartData = [...activities]
@@ -150,7 +187,7 @@ export default async function SchedulePage({
                                 .map((a: any) => ({
                                     title: a.title,
                                     count: a.signups.length,
-                                    percent: (a.signups.length / maxAttendees) * 100
+                                    percent: (a.signups.length / totalPeopleCount) * 100
                                 }));
 
                             return chartData.map((item: any, idx: number) => (
@@ -162,7 +199,7 @@ export default async function SchedulePage({
                                             style={{ width: `${item.percent}%` }}
                                         />
                                     </div>
-                                    <div className={styles.chartValue}>{item.count}</div>
+                                    <div className={styles.chartValue} style={{ minWidth: '40px' }}>{item.count}/{totalPeopleCount}</div>
                                 </div>
                             ));
                         })()}
@@ -180,33 +217,19 @@ export default async function SchedulePage({
                         const endTrip = new Date("2026-01-02T23:59:59");
                         const totalDuration = endTrip.getTime() - startTrip.getTime();
 
-                        function parseDates(dateStr: string | null) {
-                            if (!dateStr) return { start: startTrip, end: endTrip };
-                            try {
-                                const parts = dateStr.split('-').map((s: string) => s.trim());
-                                if (parts.length !== 2) return { start: startTrip, end: endTrip };
 
-                                const startStr = parts[0] + ", 2025";
-                                let endYear = "2026";
-                                // If end month is December, assume same year? Unlikely for this specific trip
-                                const endStr = parts[1] + ", " + endYear;
-
-                                const s = new Date(startStr);
-                                const e = new Date(endStr);
-                                // Set times to boundary
-                                s.setHours(12, 0, 0, 0);
-                                e.setHours(12, 0, 0, 0);
-                                return { start: s, end: e };
-                            } catch (e) {
-                                return { start: startTrip, end: endTrip };
-                            }
-                        }
 
                         // 2. Map people to start/end percentages relative to trip duration
                         const peopleData = people.map((p: any) => {
-                            const { start, end } = parseDates(p.dates);
-                            const startOffset = Math.max(0, start.getTime() - startTrip.getTime());
-                            const duration = Math.min(totalDuration - startOffset, end.getTime() - start.getTime());
+                            const start = p.startDate ? new Date(p.startDate) : startTrip;
+                            const end = p.endDate ? new Date(p.endDate) : endTrip;
+
+                            // Ensure dates are valid objects
+                            const sTime = !isNaN(start.getTime()) ? start.getTime() : startTrip.getTime();
+                            const eTime = !isNaN(end.getTime()) ? end.getTime() : endTrip.getTime();
+
+                            const startOffset = Math.max(0, sTime - startTrip.getTime());
+                            const duration = Math.min(totalDuration - startOffset, eTime - sTime);
 
                             const left = (startOffset / totalDuration) * 100;
                             const width = (duration / totalDuration) * 100;
