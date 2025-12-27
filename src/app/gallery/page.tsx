@@ -5,7 +5,7 @@ import styles from './gallery.module.css';
 export const dynamic = 'force-dynamic';
 
 export default async function GalleryPage() {
-    let blobs = [];
+    let blobs: any[] = [];
 
     try {
         const response = await list();
