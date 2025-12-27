@@ -4,12 +4,34 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { put } from '@vercel/blob';
+
+export async function uploadImage(data: FormData) {
+    const file = data.get('file') as File;
+    if (!file) {
+        throw new Error('No file selected');
+    }
+
+    const blob = await put(file.name, file, { access: 'public' });
+
+    revalidatePath('/gallery');
+    redirect('/gallery');
+}
 
 export async function login(data: FormData) {
     const password = data.get('password') as string;
+
+    // Global Trip Password
     if (password === 'EmeraldIsle25!') {
-        cookies().set('isAdmin', 'true', { secure: true, httpOnly: true, sameSite: 'strict', path: '/' });
-        redirect('/settings');
+        // Set a global access cookie
+        cookies().set('trip_access', 'granted', {
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7 // 1 week
+        });
+        redirect('/');
     } else {
         redirect('/login?error=Invalid+Password');
     }
