@@ -5,8 +5,8 @@ import QRCode from 'react-qr-code';
 export const dynamic = 'force-dynamic';
 
 export default function UploadPage() {
-    // Use environment variable or fallback to default
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://emerald-isle-app.vercel.app";
+    // Use environment variable or fallback to custom domain
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ei.blueechostudios.com";
     const uploadUrl = `${baseUrl}/gallery/upload`;
 
     return (
