@@ -2,6 +2,8 @@ import prisma from '@/lib/prisma';
 import styles from './page.module.css';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const people = await prisma.person.findMany({
     orderBy: { name: 'asc' }

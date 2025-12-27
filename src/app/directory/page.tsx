@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import styles from './directory.module.css';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DirectoryPage() {
     const people = await prisma.person.findMany({
         orderBy: { name: 'asc' },
