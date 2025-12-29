@@ -8,10 +8,10 @@ interface Activity {
     id: string;
     title: string;
     date: Date;
-    description: string;
-    location: string;
-    cost: number;
-    icon: string;
+    description: string | null;
+    location: string | null;
+    cost: number | null;
+    icon: string | null;
 }
 
 interface SignupWizardProps {
@@ -117,7 +117,7 @@ export default function SignupWizard({ userId, activities }: SignupWizardProps) 
                                         {formatTime(currentActivity.date)}
                                         {currentActivity.location && ` • ${currentActivity.location}`}
                                     </div>
-                                    {currentActivity.cost > 0 && (
+                                    {(currentActivity.cost || 0) > 0 && (
                                         <div style={{ color: '#fbbf24', fontWeight: 'bold', marginTop: '0.2rem' }}>
                                             ${currentActivity.cost}
                                         </div>
