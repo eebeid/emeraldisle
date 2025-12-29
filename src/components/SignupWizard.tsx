@@ -79,14 +79,17 @@ export default function SignupWizard({ userId, activities }: SignupWizardProps) 
                 style={{
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: 'white',
-                    padding: '0.8rem 1.5rem',
+                    width: '100%',
+                    padding: '1rem',
                     borderRadius: '8px',
                     fontWeight: 'bold',
+                    fontSize: '1.1rem',
                     border: 'none',
                     boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '0.5rem',
                     marginBottom: '1rem'
                 }}
