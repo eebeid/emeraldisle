@@ -163,6 +163,7 @@ export async function createPerson(data: FormData) {
     const phoneNumber = data.get('phoneNumber') as string;
     const startDateStr = data.get('startDate') as string;
     const endDateStr = data.get('endDate') as string;
+    const addressId = data.get('addressId') as string;
 
     if (!name) return;
 
@@ -172,6 +173,8 @@ export async function createPerson(data: FormData) {
             phoneNumber,
             startDate: startDateStr ? new Date(startDateStr) : null,
             endDate: endDateStr ? new Date(endDateStr) : null,
+            address: addressId ? { connect: { id: addressId } } : undefined,
+            reminderPreferences: data.getAll('reminderPreferences') as string[]
         }
     });
     revalidatePath('/');
@@ -186,6 +189,7 @@ export async function updatePerson(id: string, data: FormData) {
     const endDateStr = data.get('endDate') as string;
     const phoneNumber = data.get('phoneNumber') as string;
     const addressId = data.get('addressId') as string;
+    const reminderPreferences = data.getAll('reminderPreferences') as string[]; // Get all checkboxes
 
     if (!name) return;
 
@@ -196,7 +200,8 @@ export async function updatePerson(id: string, data: FormData) {
             startDate: startDateStr ? new Date(startDateStr) : null,
             endDate: endDateStr ? new Date(endDateStr) : null,
             phoneNumber,
-            addressId: addressId || null
+            address: addressId ? { connect: { id: addressId } } : { disconnect: true },
+            reminderPreferences
         }
     });
 
@@ -212,4 +217,115 @@ export async function deletePerson(id: string) {
     revalidatePath('/directory');
     revalidatePath('/settings');
     redirect('/settings?success=Person+Deleted');
+}
+
+export async function restoreData(csvContent: string) {
+    if (!csvContent) return { error: "Empty file content" };
+
+    try {
+        const lines = csvContent.split('\n');
+        // Expected Header: Name,Phone,Address,Start Date,End Date,Signed Up Activities
+
+        let successCount = 0;
+        let logs: string[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            // Handle quoted CSV parsing simply (assuming no commas inside fields except quoted ones)
+            // A more robust parser would be better, but for this specific CSV format:
+            // "Name",Phone,Address,Start,End,"Activity; Activity"
+
+            // Regex to split by comma, respecting quotes
+            const parts = line.match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
+            if (!parts || parts.length < 6) continue;
+
+            // Clean up regex results (remove leading comma and quotes)
+            const cleanParts = parts.map(p => {
+                let s = p.replace(/^,/, '');
+                if (s.startsWith('"') && s.endsWith('"')) {
+                    s = s.slice(1, -1);
+                }
+                return s.replace(/""/g, '"').trim();
+            });
+
+            const [name, phone, addressStr, startDateStr, endDateStr, activitiesStr] = cleanParts;
+
+            if (!name) continue;
+
+            // 1. Upsert Address
+            let addressId = null;
+            if (addressStr) {
+                // Since upsert requires unique where, use manual logic:
+                let existingAddr = await prisma.address.findFirst({ where: { fullAddress: addressStr } });
+                if (!existingAddr) {
+                    existingAddr = await prisma.address.create({ data: { name: addressStr, fullAddress: addressStr } });
+                }
+                addressId = existingAddr.id;
+            }
+
+            // 2. Upsert Person
+            const person = await prisma.person.upsert({
+                where: { name },
+                create: {
+                    name,
+                    phoneNumber: phone || null,
+                    startDate: startDateStr ? new Date(startDateStr) : null,
+                    endDate: endDateStr ? new Date(endDateStr) : null,
+                    addressId
+                },
+                update: {
+                    phoneNumber: phone || null,
+                    startDate: startDateStr ? new Date(startDateStr) : null,
+                    endDate: endDateStr ? new Date(endDateStr) : null,
+                    addressId
+                }
+            });
+
+            // 3. Restore Signups
+            if (activitiesStr) {
+                const activityEntries = activitiesStr.split(';').map(s => s.trim()).filter(Boolean);
+
+                for (const entry of activityEntries) {
+                    // entry format: "Activity Title (M/D/YYYY, H:MM:SS PM)"
+                    // We only need the Title to match.
+                    // Extract title before the last " ("
+                    const lastParenIndex = entry.lastIndexOf(' (');
+                    let title = entry;
+                    if (lastParenIndex !== -1) {
+                        title = entry.substring(0, lastParenIndex).trim();
+                    }
+
+                    // Find activity by title
+                    const activity = await prisma.activity.findFirst({
+                        where: { title: { equals: title, mode: 'insensitive' } }
+                    });
+
+                    if (activity) {
+                        await prisma.signup.upsert({
+                            where: {
+                                personId_activityId: {
+                                    personId: person.id,
+                                    activityId: activity.id
+                                }
+                            },
+                            create: { personId: person.id, activityId: activity.id, status: 'CONFIRMED' },
+                            update: { status: 'CONFIRMED' }
+                        });
+                    } else {
+                        logs.push(`⚠️ Skipped activity "${title}" for ${name} (not found in schedule)`);
+                    }
+                }
+            }
+            successCount++;
+        }
+
+        revalidatePath('/'); // Revalidate everything just in case
+        return { success: true, message: `Restored ${successCount} people.\n${logs.join('\n')}` };
+
+    } catch (error: any) {
+        console.error("Restore Error:", error);
+        return { success: false, error: error.message };
+    }
 }

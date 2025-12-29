@@ -20,6 +20,7 @@ model Person {
   address   Address? @relation(fields: [addressId], references: [id])
   signups   Signup[]
   
+  reminderPreferences String[] @default(["15m", "30m", "60m"])
   isAdmin   Boolean  @default(false)
   
   createdAt DateTime @default(now())
@@ -47,6 +48,7 @@ model Activity {
   venmoLink   String?  // Can be a full link or identifier
   category    String?  // e.g. "Food", "Sport", "Trip"
   icon        String?  // Emoji or icon name
+  remindersSent String[] @default([]) // Tracks "15m", "30m", "60m" reminders
 
   signups     Signup[]
 

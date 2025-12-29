@@ -1,7 +1,7 @@
 import { list } from '@vercel/blob';
 import Link from 'next/link';
 import styles from './gallery.module.css';
-import PhotoCard from '../../components/PhotoCard';
+import GalleryGrid from '../../components/GalleryGrid';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +31,7 @@ export default async function GalleryPage() {
                     <p>Be the first to upload!</p>
                 </div>
             ) : (
-                <div className={styles.grid}>
-                    {blobs.map((blob) => (
-                        <PhotoCard key={blob.url} url={blob.url} />
-                    ))}
-                </div>
+                <GalleryGrid blobs={blobs} />
             )}
         </div>
     );

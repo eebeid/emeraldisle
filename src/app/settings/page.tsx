@@ -3,6 +3,7 @@ import styles from './settings.module.css';
 import { createActivity, deleteActivity, createPerson, deletePerson } from '../actions';
 import Link from 'next/link';
 import TimePicker from '@/components/TimePicker';
+import RestoreBackup from '@/components/RestoreBackup';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +34,20 @@ export default async function SettingsPage({
                     ✅ {searchParams.success}
                 </div>
             )}
+
+
+            <section className="card" style={{ marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Data Management</h2>
+                <p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.9rem' }}>
+                    Download a full backup of all people, addresses, and activity signups locally.
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <a href="/api/backup" download className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                        💾 Download Backup CSV
+                    </a>
+                    <RestoreBackup />
+                </div>
+            </section>
 
             <div className={styles.grid}>
                 <section className="card">

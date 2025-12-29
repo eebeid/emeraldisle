@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { deletePhoto } from '../app/actions';
 import styles from '../app/gallery/gallery.module.css';
 
-export default function PhotoCard({ url }: { url: string }) {
+export default function PhotoCard({ url, onClick }: { url: string; onClick?: () => void }) {
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = async () => {
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation(); // Don't trigger lightbox
         if (!confirm("Are you sure you want to delete this photo?")) return;
 
         setIsDeleting(true);
@@ -21,7 +22,7 @@ export default function PhotoCard({ url }: { url: string }) {
     };
 
     return (
-        <div className={styles.photoCard}>
+        <div className={styles.photoCard} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
             <img
                 src={url}
                 alt="Gallery photo"

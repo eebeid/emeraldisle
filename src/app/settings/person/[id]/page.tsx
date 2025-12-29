@@ -52,6 +52,25 @@ export default async function EditPersonPage({ params }: { params: { id: string 
                         </select>
                     </div>
 
+                    <div className={styles.formGroup}>
+                        <label>Notification Preferences (SMS)</label>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>Select when you want to receive text reminders before an event.</p>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                            {['60m', '30m', '15m'].map(time => (
+                                <label key={time} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'normal', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="reminderPreferences"
+                                        value={time}
+                                        defaultChecked={person.reminderPreferences?.includes(time)}
+                                        style={{ width: 'auto', margin: 0 }}
+                                    />
+                                    {time === '60m' ? '1 Hour' : time === '30m' ? '30 Minutes' : '15 Minutes'}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button type="submit" className="btn btn-primary">Save Changes</button>
                         <Link href="/settings" className="btn" style={{ border: '1px solid var(--border)', textDecoration: 'none' }}>Cancel</Link>
