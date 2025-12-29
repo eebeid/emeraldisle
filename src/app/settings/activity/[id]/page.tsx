@@ -5,6 +5,9 @@ import styles from '@/app/settings/settings.module.css';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { toZonedTime } from 'date-fns-tz';
+import TimePicker from '@/components/TimePicker';
+
 export default async function EditActivityPage({ params }: { params: { id: string } }) {
     const activity = await prisma.activity.findUnique({
         where: { id: params.id }
@@ -14,8 +17,19 @@ export default async function EditActivityPage({ params }: { params: { id: strin
         redirect('/settings');
     }
 
-    const dateStr = activity.date.toISOString().split('T')[0];
-    const timeStr = activity.date.toISOString().split('T')[1].substring(0, 5);
+    // Convert stored UTC date to New York time for editing
+    const nyDate = toZonedTime(activity.date, 'America/New_York');
+
+    // YYYY-MM-DD
+    const year = nyDate.getFullYear();
+    const month = String(nyDate.getMonth() + 1).padStart(2, '0');
+    const day = String(nyDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    // HH:MM (24h format for TimePicker default)
+    const hours = String(nyDate.getHours()).padStart(2, '0');
+    const minutes = String(nyDate.getMinutes()).padStart(2, '0');
+    const timeStr = `${hours}:${minutes}`;
 
     return (
         <div className={styles.container}>
@@ -37,7 +51,7 @@ export default async function EditActivityPage({ params }: { params: { id: strin
                         </div>
                         <div className={styles.formGroup}>
                             <label>Time</label>
-                            <input type="time" name="time" required defaultValue={timeStr} />
+                            <TimePicker name="time" defaultValue={timeStr} />
                         </div>
                     </div>
                     <div className={styles.formGroup}>

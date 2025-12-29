@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { put } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 
 export async function uploadImage(data: FormData) {
     const file = data.get('file') as File;
@@ -16,6 +16,12 @@ export async function uploadImage(data: FormData) {
 
     revalidatePath('/gallery');
     redirect('/gallery');
+}
+
+export async function deletePhoto(url: string) {
+    if (!url) return;
+    await del(url);
+    revalidatePath('/gallery');
 }
 
 export async function login(data: FormData) {
@@ -74,6 +80,10 @@ export async function cancelSignup(activityId: string, personId: string) {
     revalidatePath('/schedule');
 }
 
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+
+const NY_TIMEZONE = 'America/New_York';
+
 export async function createActivity(data: FormData) {
     const title = data.get('title') as string;
     const dateStr = data.get('date') as string;
@@ -85,8 +95,10 @@ export async function createActivity(data: FormData) {
 
     if (!title || !dateStr || !timeStr) return;
 
-    // Combine date and time
-    const date = new Date(`${dateStr}T${timeStr}`);
+    // Combine date and time and interpret as NY time
+    // dateStr is YYYY-MM-DD, timeStr is HH:MM
+    const isoString = `${dateStr}T${timeStr}`;
+    const date = fromZonedTime(isoString, NY_TIMEZONE);
 
     await prisma.activity.create({
         data: {
@@ -117,7 +129,8 @@ export async function updateActivity(id: string, data: FormData) {
 
     if (!title || !dateStr || !timeStr) return;
 
-    const date = new Date(`${dateStr}T${timeStr}`);
+    const isoString = `${dateStr}T${timeStr}`;
+    const date = fromZonedTime(isoString, NY_TIMEZONE);
 
     await prisma.activity.update({
         where: { id },

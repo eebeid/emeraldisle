@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import styles from './settings.module.css';
 import { createActivity, deleteActivity, createPerson, deletePerson } from '../actions';
 import Link from 'next/link';
+import TimePicker from '@/components/TimePicker';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,7 @@ export default async function SettingsPage({
                             </div>
                             <div className={styles.formGroup}>
                                 <label>Time</label>
-                                <input type="time" name="time" required />
+                                <TimePicker name="time" />
                             </div>
                         </div>
                         <div className={styles.formGroup}>

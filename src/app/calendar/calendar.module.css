@@ -19,15 +19,15 @@
 .dayName {
     text-align: center;
     font-weight: bold;
-    color: var(--foreground-rgb);
+    color: hsl(var(--foreground));
     padding: 0.5rem;
-    opacity: 0.7;
+    opacity: 0.9;
 }
 
 .dayCell {
     background: rgba(255, 255, 255, 0.05);
     /* Glass effect base */
-    border: 1px solid var(--border);
+    border: 1px solid hsl(var(--border));
     border-radius: 8px;
     min-height: 120px;
     padding: 0.5rem;
@@ -39,7 +39,7 @@
 
 .dayCell:hover {
     background: rgba(255, 255, 255, 0.1);
-    border-color: var(--primary);
+    border-color: hsl(var(--primary));
 }
 
 .currentMonth {
@@ -74,6 +74,31 @@
 .event:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.past {
+    background-color: #334155;
+    /* Slate-700 / Dark Gray */
+    opacity: 0.8;
+    filter: none;
+    color: #e2e8f0;
+    border-left-color: #94a3b8;
+}
+
+.future {
+    background-color: #172554;
+    /* Blue-950 / Navy Blue */
+    border-left: 3px solid #34d399;
+    /* Emerald-400 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
+}
+
+.future:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1);
+    background-color: #172554;
+    /* Keep navy on hover */
 }
 
 .monthTitle {

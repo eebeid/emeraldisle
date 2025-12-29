@@ -3,15 +3,29 @@ import styles from './schedule.module.css';
 import { signupForActivity, cancelSignup } from '../actions';
 import { getTwoweekWeather, getWeatherIcon } from '@/lib/weather';
 import Link from 'next/link';
+import SignupWizard from '../../components/SignupWizard';
 
 export const dynamic = 'force-dynamic';
 
+import { toZonedTime } from 'date-fns-tz';
+
+const NY_TIMEZONE = 'America/New_York';
+
 function formatDate(date: Date) {
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        timeZone: NY_TIMEZONE
+    });
 }
 
 function formatTime(date: Date) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: NY_TIMEZONE
+    });
 }
 
 export default async function SchedulePage({
@@ -36,15 +50,9 @@ export default async function SchedulePage({
     const weatherMap = new Map<string, { max: number; min: number; icon: string }>();
 
     if (weatherData && weatherData.daily) {
-        weatherData.daily.time.forEach((t, i) => {
-            // Ensure date string matches formatDate(new Date(t)) format logic if possible, 
-            // or just match YYYY-MM-DD. 
-            // Our formatDate uses "Weekday, Month Day", so we need to map via Date object.
-
-            // Note: 't' from API is YYYY-MM-DD.
-            // Let's create a date object (noon to avoid timezone shift issues roughly)
+        weatherData.daily.time.forEach((t: string, i: number) => {
             const d = new Date(t + 'T12:00:00');
-            const dateKey = formatDate(d); // e.g. "Friday, December 26"
+            const dateKey = formatDate(d);
             weatherMap.set(dateKey, {
                 max: Math.round(weatherData.daily.temperature_2m_max[i]),
                 min: Math.round(weatherData.daily.temperature_2m_min[i]),
@@ -55,12 +63,10 @@ export default async function SchedulePage({
 
     const people = await prisma.person.findMany({ orderBy: { name: 'asc' } });
 
-    // Calculate totals if user is logged in
     const myActivities = user?.signups.map((s: any) => s.activity) || [];
     const totalCost = myActivities.reduce((sum: number, act: any) => sum + (act.cost || 0), 0);
     const totalActivities = myActivities.length;
 
-    // Group by date
     const grouped = activities.reduce((acc: any, activity: any) => {
         const dateKey = formatDate(activity.date);
         if (!acc[dateKey]) acc[dateKey] = [];
@@ -68,10 +74,24 @@ export default async function SchedulePage({
         return acc;
     }, {} as Record<string, typeof activities>);
 
+    // Calculate unsigned future activities for the wizard
+    const now = new Date();
+    const futureActivities = activities.filter((a: any) => new Date(a.date) > now);
+    const unsignedActivities = user
+        ? futureActivities.filter((a: any) => !user.signups.some((s: any) => s.activityId === a.id))
+        : [];
+
     return (
         <div className={styles.container}>
             <header className={styles.header}>
                 <h1>Trip Schedule</h1>
+
+                {user && unsignedActivities.length > 0 && (
+                    <div style={{ marginTop: '1rem' }}>
+                        <SignupWizard userId={user.id} activities={unsignedActivities} />
+                    </div>
+                )}
+
                 {user ? (
                     <div className="card glass" style={{ marginTop: '1rem', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                         <div>
@@ -114,9 +134,10 @@ export default async function SchedulePage({
                             <div className={styles.events}>
                                 {dayActivities.map((activity: any) => {
                                     const isSignedUp = user ? activity.signups.some((s: any) => s.personId === userId) : false;
+                                    const isPast = new Date(activity.date) < new Date();
 
                                     return (
-                                        <div key={activity.id} className={`${styles.event} card ${isSignedUp ? styles.signedUp : ''}`}>
+                                        <div id={activity.id} key={activity.id} className={`${styles.event} card ${isSignedUp ? styles.signedUp : ''} ${isPast ? styles.past : styles.future}`}>
                                             <div className={styles.timeSection}>
                                                 <div className={styles.time}>{formatTime(activity.date)}</div>
                                                 {activity.cost ? <div className={styles.costBadge}>${activity.cost}</div> : null}
@@ -125,7 +146,7 @@ export default async function SchedulePage({
                                             <div className={styles.content}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '0.5rem' }}>
                                                     <h3>{activity.icon} {activity.title}</h3>
-                                                    {user && (
+                                                    {user ? (
                                                         <form action={async () => {
                                                             'use server';
                                                             if (!userId) return;
@@ -142,6 +163,22 @@ export default async function SchedulePage({
                                                                 {isSignedUp ? '✅ Attending' : 'Join'}
                                                             </button>
                                                         </form>
+                                                    ) : (
+                                                        <Link
+                                                            href="/"
+                                                            style={{
+                                                                padding: '0.4rem 0.8rem',
+                                                                fontSize: '0.8rem',
+                                                                borderRadius: '0.5rem',
+                                                                background: 'rgba(255,255,255,0.1)',
+                                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                                color: 'inherit',
+                                                                textDecoration: 'none',
+                                                                opacity: 0.8
+                                                            }}
+                                                        >
+                                                            Log in to Join
+                                                        </Link>
                                                     )}
                                                 </div>
 
@@ -178,10 +215,8 @@ export default async function SchedulePage({
                     <h2 className={styles.chartTitle}>Attendance Overview</h2>
                     <div className={styles.chart}>
                         {(() => {
-                            const maxAttendees = Math.max(...activities.map((a: any) => a.signups.length), 1);
                             const totalPeopleCount = people.length || 1;
 
-                            // Sort by most attended, then chronologically
                             const chartData = [...activities]
                                 .sort((a: any, b: any) => b.signups.length - a.signups.length || new Date(a.date).getTime() - new Date(b.date).getTime())
                                 .map((a: any) => ({
@@ -207,24 +242,18 @@ export default async function SchedulePage({
                 </div>
             )}
 
-            {/* Person Presence Timeline */}
             <div className={styles.chartContainer} style={{ marginTop: '4rem' }}>
                 <h2 className={styles.chartTitle}>Who's In Town</h2>
                 <div className={styles.chart}>
                     {(() => {
-                        // 1. Calculate trip boundaries (Dec 26 - Jan 2 default, or derive)
                         const startTrip = new Date("2025-12-26T00:00:00");
                         const endTrip = new Date("2026-01-02T23:59:59");
                         const totalDuration = endTrip.getTime() - startTrip.getTime();
 
-
-
-                        // 2. Map people to start/end percentages relative to trip duration
                         const peopleData = people.map((p: any) => {
                             const start = p.startDate ? new Date(p.startDate) : startTrip;
                             const end = p.endDate ? new Date(p.endDate) : endTrip;
 
-                            // Ensure dates are valid objects
                             const sTime = !isNaN(start.getTime()) ? start.getTime() : startTrip.getTime();
                             const eTime = !isNaN(end.getTime()) ? end.getTime() : endTrip.getTime();
 
@@ -247,7 +276,7 @@ export default async function SchedulePage({
                                             position: 'absolute',
                                             left: `${p.left}%`,
                                             width: `${p.width}%`,
-                                            backgroundColor: '#10b981', // Emerald green
+                                            backgroundColor: '#10b981',
                                             background: '#10b981',
                                             opacity: 0.8
                                         }}

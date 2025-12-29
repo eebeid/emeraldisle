@@ -1,24 +1,17 @@
 // prisma/seed.ts
+// @ts-nocheck
 const { PrismaClient } = require('@prisma/client')
+const { fromZonedTime } = require('date-fns-tz');
 
 const prisma = new PrismaClient()
 
 async function main() {
     console.log("Resetting Directory Data...")
 
-    // 1. Clear People and Addresses (Wait! Deleting people deletes signups due to cascade)
-    // The user said "remove all duplicates... and start over using this", implying a hard reset of directory.
-    // However, we want to try to preserve signups if possible? 
-    // Actually, if we delete people, signups go. That's unavoidable if IDs change or we strictly deleteMany.
-    // Let's assume a hard reset is acceptable for directory, or we try to update inplace?
-    // "Remove all duplicates" suggests wiping is best.
-
-    // To be safe, let's wipe People and Addresses. 
-    // NOTE: This WILL delete all existing signups for activities.
-    // Given the early stage, this is likely acceptable.
-
-    await prisma.signup.deleteMany({}) // Clear signups first to be clean
+    // Clear everything
+    await prisma.signup.deleteMany({})
     await prisma.person.deleteMany({})
+    await prisma.activity.deleteMany({})
     await prisma.address.deleteMany({})
 
     const manualData = [
@@ -49,6 +42,7 @@ async function main() {
         { name: "Grace", startDate: "2025-12-28", endDate: "2026-01-02", address: "9317 Ocean Drive, Emerald Isle, NC 28594 - East" },
     ];
 
+    console.log("Seeding People...");
     for (const p of manualData) {
         const name = p.name.trim();
         const addressName = p.address.trim();
@@ -59,7 +53,6 @@ async function main() {
         });
 
         if (!addr) {
-            console.log(`Creating address: ${addressName}`);
             addr = await prisma.address.create({
                 data: {
                     name: addressName,
@@ -79,47 +72,136 @@ async function main() {
         });
     }
 
-    console.log("Directory reset complete.")
-
     console.log("Seeding Activities...");
-    await prisma.activity.deleteMany({});
 
-    const activitiesData = [
-        { title: "Michael Angelo's Pizza", cost: 20.00, date: "2025-12-27T19:00:00", description: "Dinner", icon: "🍕", location: "Michael Angelo's Pizza" },
-        { title: "GMU Basketball", cost: 0.00, date: "2025-12-28T17:00:00", description: "Watch Party", icon: "🏀", location: "Main House" },
-        { title: "Golf Star Hill", cost: 75.00, date: "2025-12-28T09:30:00", description: "Morning Tee Time", icon: "⛳️", location: "Star Hill Golf Club" },
-        { title: "Neal's Birthday", cost: 0.00, date: "2025-12-28T20:30:00", description: "Celebration", icon: "🎂", location: "Main House" },
-        { title: "Golf Star Hill", cost: 75.00, date: "2025-12-29T10:00:00", description: "Round 2", icon: "⛳️", location: "Star Hill Golf Club" },
-        { title: "Movie (Wicked)", cost: 20.00, date: "2025-12-29T12:00:00", description: "Cinema Trip", icon: "🎬", location: "Emerald Isle Cinema" },
-        { title: "Book Store", cost: 0.00, date: "2025-12-29T15:00:00", description: "Browsing", icon: "📚", location: "Emerald Isle Books" },
-        { title: "Music Night", cost: 0.00, date: "2025-12-29T20:00:00", description: "Jam Session / Listening", icon: "🎵", location: "Main House" },
-        { title: "Escape Room", cost: 30.00, date: "2025-12-30T16:00:00", description: "Can we escape?", icon: "🔐", location: "Game On Escape Rooms" },
-        { title: "Shopping", cost: 0.00, date: "2025-12-30T18:00:00", description: "Local shops", icon: "🛍️", location: "Local Shops" },
-        { title: "Mexican Dinner In Town TBD", cost: 0.00, date: "2025-12-30T19:00:00", description: "Group Dinner", icon: "🌮", location: "TBD" },
-        { title: "Vibe Coding", cost: 0.00, date: "2025-12-30T21:00:00", description: "Late night hacking", icon: "💻", location: "Main House" },
-        { title: "Poker Tournament", cost: 20.00, date: "2025-12-30T22:00:00", description: "Buy-in required", icon: "♠️", location: "Main House" },
-        { title: "Bowling Mac Daddy's", cost: 50.00, date: "2025-12-31T16:30:00", description: "NYE Bowling", icon: "🎳", location: "Mac Daddy's" },
-        { title: "NCAA Football Playoffs", cost: 0.00, date: "2026-01-01T12:00:00", description: "All Day Games", icon: "🏈", location: "Main House" },
-        { title: "Board Games", cost: 0.00, date: "2026-01-01T12:00:00", description: "All Day Gaming", icon: "🎲", location: "Main House" },
-        { title: "Downtempo Music", cost: 0.00, date: "2026-01-01T12:00:00", description: "Relaxing Vibes", icon: "🎧", location: "Main House" },
-        { title: "Resolution List Creation", cost: 0.00, date: "2026-01-01T12:00:00", description: "Planning for 2026", icon: "📝", location: "Main House" },
-        { title: "MMA Showcase", cost: 0.00, date: "2026-01-01T12:00:00", description: "Watch Party", icon: "🥊", location: "Main House" },
-        { title: "Grace's Birthday Lunch", cost: 0.00, date: "2026-01-02T12:00:00", description: "Birthday Celebration", icon: "🎂", location: "Main House" }
+    // Data scraped from production site (Step 401)
+    const productionActivities = [
+        { dateHeader: "Saturday, December 27", time: "7:00 PM", title: "🍕 Michael Angelo's Pizza", cost: "$15", location: "Michael Angelo's Pizza", description: "Dinner" },
+        { dateHeader: "Sunday, December 28", time: "2:30 PM", title: "⛳️ Golf Star Hill", cost: "$45", location: "Star Hill Golf Club", description: "Tee Time" },
+        { dateHeader: "Sunday, December 28", time: "5:00 PM", title: "🏀 GMU Basketball Game", cost: null, location: "Dunescrest - East", description: "Watch Party @ 9257 Ocean Dr, Emerald Isle, NC 2859" },
+        { dateHeader: "Sunday, December 28", time: "7:30 PM", title: "🎂 Neal's Birthday", cost: null, location: "Dunescrest - West", description: "Celebration @ 9257 Ocean Dr, Emerald Isle, NC 2859" },
+        { dateHeader: "Monday, December 29", time: "12:30 PM", title: "⛳️ Golf Star Hill", cost: "$75", location: "Star Hill Golf Club", description: "Round 2" },
+        { dateHeader: "Monday, December 29", time: "1:00 PM", title: "🎬 Movie (House Maid)", cost: "$11", location: "Emerald Plantation Cinema", description: "Cinema Trip" },
+        { dateHeader: "Monday, December 29", time: "1:15 PM", title: "Movie (Anacanda)", cost: "$12", location: "Emerald Plantation", description: "" },
+        { dateHeader: "Monday, December 29", time: "2:30 PM", title: "📚 Book Store", cost: null, location: "Emerald Isle Books", description: "Browsing" },
+        { dateHeader: "Monday, December 29", time: "7:00 PM", title: "🥩 🦞 🍤 CaribSea", cost: null, location: "CaribSea", description: "https://caribsearestaurant.com/menu/" },
+        { dateHeader: "Tuesday, December 30", time: "3:00 PM", title: "🔐 Escape Room", cost: "$30", location: "Cracked It!", description: "Can we escape?" },
+        { dateHeader: "Tuesday, December 30", time: "5:30 PM", title: "🛍️ Jacksonville Shopping", cost: null, location: "Local Shops", description: "Local shops" },
+        { dateHeader: "Tuesday, December 30", time: "6:30 PM", title: "🌮 Mexican Dinner In Town TBD", cost: null, location: "TBD", description: "Group Dinner" },
+        { dateHeader: "Tuesday, December 30", time: "7:00 PM", title: "🎵 Music Night", cost: null, location: "Main House", description: "Jam Session / Listening" },
+        { dateHeader: "Tuesday, December 30", time: "9:09 PM", title: "Sky Lanterns", cost: null, location: "", description: "" },
+        { dateHeader: "Wednesday, December 31", time: "9:00 AM", title: "Biscuits n Gravy", cost: "$50", location: "Nana’s House", description: "Watch party!" },
+        { dateHeader: "Wednesday, December 31", time: "2:00 PM", title: "🏀 GMU Basketball Game", cost: null, location: "Dunescrest East", description: "Watch party!" },
+        { dateHeader: "Wednesday, December 31", time: "4:30 PM", title: "🎳 Bowling Mac Daddy's", cost: "$50", location: "Mac Daddy's", description: "NYE Bowling" },
+        { dateHeader: "Wednesday, December 31", time: "6:00 PM", title: "🍾🎉🎊👏🥳🙌 Swanky Appletizers", cost: null, location: "Main house", description: "" },
+        { dateHeader: "Wednesday, December 31", time: "8:00 PM", title: "🖤🫣🖤 Stranger things finale", cost: null, location: "TBD", description: "Series finale watch party!" },
+        { dateHeader: "Wednesday, December 31", time: "10:00 PM", title: "♠️ Poker Tournament", cost: "$20", location: "Main House", description: "Buy-in required" },
+        { dateHeader: "Thursday, January 1", time: "5:00 PM", title: "🎲 Board Games", cost: null, location: "Main House", description: "All Day Gaming" },
+        { dateHeader: "Thursday, January 1", time: "5:00 PM", title: "🥊 MMA Showcase", cost: null, location: "Main House", description: "Watch Party" },
+        { dateHeader: "Thursday, January 1", time: "5:00 PM", title: "🏈 NCAA Football Playoffs", cost: null, location: "Main House", description: "All Day Games" },
+        { dateHeader: "Thursday, January 1", time: "5:00 PM", title: "🎧 Downtempo Music", cost: null, location: "Main House", description: "Relaxing Vibes" },
+        { dateHeader: "Thursday, January 1", time: "5:00 PM", title: "📝 Resolution List Creation", cost: null, location: "Main House", description: "Planning for 2026" },
+        { dateHeader: "Friday, January 2", time: "12:00 PM", title: "🎂 Grace's Birthday Lunch", cost: "$20", location: "Main House", description: "Birthday Celebration" },
+        { dateHeader: "Friday, January 2", time: "6:00 PM", title: "Cup O’ Joy to 2026", cost: "$20", location: "Espresso Martini Bar in Swansboro", description: "" }
     ];
 
-    for (const act of activitiesData) {
+    // Helper to separate Icon from Title
+    // Assumes icon is the first character(s) if it's an emoji
+    function parseIconAndTitle(rawTitle) {
+        // Regex to find leading emojis (simplified)
+        // Or just check if first char is non-ascii or specific known icons
+        // The scrape output format: "🍕 Michael Angelo's Pizza"
+        // Let's split by first space if regex matches emoji-like
+
+        const match = rawTitle.match(/^([\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+)\s+(.+)/u);
+        if (match) {
+            return { icon: match[1], title: match[2] };
+        }
+        // Special case: "Movie (Anacanda)" - no icon
+        return { icon: '📅', title: rawTitle };
+    }
+
+    // Helper to parse date
+    // "Saturday, December 27" + "7:00 PM"
+    function parseScrapedDate(dateHeader, timeStr) {
+        // dateHeader format: "DayOfWeek, Month Day"
+        // Need to add Year. 
+        // If Dec -> 2025. If Jan -> 2026.
+
+        let cleanDate = dateHeader.split(',')[1].trim(); // "December 27"
+        let year = 2025;
+        if (cleanDate.toLowerCase().includes('jan')) year = 2026;
+
+        // timeStr: "7:00 PM"
+        // Convert to 24h for ISO
+        let [time, modifier] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':');
+
+        if (hours === '12') hours = '00';
+        if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+
+        // Pad hours and minutes
+        const hh = String(hours).padStart(2, '0');
+        const mm = (minutes || '00').padStart(2, '0');
+
+        const isoStr = `${year}-${cleanDateToMonth(cleanDate)}-${cleanDateToDay(cleanDate)} ${hh}:${mm}`;
+        console.log(`Parsed Date for ${dateHeader} ${timeStr} -> ${isoStr}`);
+        // Map Month name to number
+        return fromZonedTime(isoStr, 'America/New_York');
+    }
+
+    function cleanDateToMonth(str) {
+        if (str.includes('Dec')) return '12';
+        if (str.includes('Jan')) return '01';
+        return '12';
+    }
+    function cleanDateToDay(str) {
+        // "December 27" -> "27"
+        const m = str.match(/(\d+)/);
+        return m ? m[0].padStart(2, '0') : '01';
+    }
+
+    for (const item of productionActivities) {
+        // Parse Title/Icons
+        const { icon, title } = parseIconAndTitle(item.title);
+
+        // Parse Cost
+        let cost = 0;
+        if (item.cost) {
+            cost = parseFloat(item.cost.replace('$', '')) || 0;
+        }
+
+        // Parse Date
+        let dateObj = new Date();
+        try {
+            if (item.dateHeader && item.time) {
+                dateObj = parseScrapedDate(item.dateHeader, item.time);
+            }
+        } catch (e) {
+            console.error(`Failed to parse date for ${item.title}: ${e.message}`);
+            dateObj = new Date(); // Fallback
+        }
+
+        console.log(`Creating Activity: ${title} at ${dateObj}`);
+
         await prisma.activity.create({
             data: {
-                title: act.title,
-                description: act.description,
-                date: new Date(act.date),
-                location: act.location,
-                cost: act.cost,
-                icon: act.icon
+                title: title,
+                description: item.description || "",
+                date: dateObj,
+                location: item.location || "TBD",
+                cost: cost,
+                icon: icon
             }
         });
     }
-    console.log("Activities seeded.");
+
+    // --- No Auto Signups ---
+    // User requested to NOT sign everyone up for everything.
+    // Use the app to sign up manually.
+    console.log("Skipping auto-signups as requested.");
+
+    console.log("Directory reset complete.")
 }
 
 main()
