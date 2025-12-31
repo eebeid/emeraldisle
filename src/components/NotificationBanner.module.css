@@ -1,0 +1,18 @@
+.banner {
+    background-color: #fbbf24;
+    /* Amber-400 / Gold */
+    color: #451a03;
+    /* Amber-950 / Dark Brown */
+    text-align: center;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1001;
+    /* Above navbar */
+}
+
+.message {
+    margin: 0;
+}

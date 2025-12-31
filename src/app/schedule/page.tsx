@@ -42,11 +42,6 @@ export default async function SchedulePage({
     }) : null;
 
     const activities = await prisma.activity.findMany({
-        where: {
-            date: {
-                gte: new Date()
-            }
-        },
         orderBy: { date: 'asc' },
         include: { signups: { include: { person: true } } }
     });

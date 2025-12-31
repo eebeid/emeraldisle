@@ -329,3 +329,24 @@ export async function restoreData(csvContent: string) {
         return { success: false, error: error.message };
     }
 }
+
+export async function updateBannerSettings(data: FormData) {
+    const message = data.get('message') as string;
+    const isVisible = data.get('isVisible') === 'on';
+
+    await prisma.setting.upsert({
+        where: { key: 'BANNER_MESSAGE' },
+        update: { value: message },
+        create: { key: 'BANNER_MESSAGE', value: message }
+    });
+
+    await prisma.setting.upsert({
+        where: { key: 'BANNER_VISIBLE' },
+        update: { value: isVisible ? 'true' : 'false' },
+        create: { key: 'BANNER_VISIBLE', value: isVisible ? 'true' : 'false' }
+    });
+
+    revalidatePath('/');
+    revalidatePath('/settings');
+    redirect('/settings?success=Banner+Updated');
+}

@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import styles from './settings.module.css';
-import { createActivity, deleteActivity, createPerson, deletePerson } from '../actions';
+import { createActivity, deleteActivity, createPerson, deletePerson, updateBannerSettings } from '../actions';
 import Link from 'next/link';
 import TimePicker from '@/components/TimePicker';
 import RestoreBackup from '@/components/RestoreBackup';
@@ -14,6 +14,8 @@ export default async function SettingsPage({
 }) {
     const activities = await prisma.activity.findMany({ orderBy: { date: 'asc' } });
     const people = await prisma.person.findMany({ orderBy: { name: 'asc' } });
+    const bannerMessage = await prisma.setting.findUnique({ where: { key: 'BANNER_MESSAGE' } });
+    const bannerVisible = await prisma.setting.findUnique({ where: { key: 'BANNER_VISIBLE' } });
 
     return (
         <div className={styles.container}>
@@ -35,6 +37,36 @@ export default async function SettingsPage({
                 </div>
             )}
 
+
+            <div className="card glass" style={{ marginBottom: '2rem' }}>
+                <h2>Notification Banner</h2>
+                <form action={updateBannerSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Banner Message</label>
+                        <input
+                            type="text"
+                            name="message"
+                            placeholder="e.g. Flight delayed! New schedule below."
+                            defaultValue={bannerMessage?.value || ''}
+                            className={styles.input}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input
+                            type="checkbox"
+                            name="isVisible"
+                            id="bannerVisible"
+                            defaultChecked={bannerVisible?.value === 'true'}
+                            style={{ width: '1.2rem', height: '1.2rem' }}
+                        />
+                        <label htmlFor="bannerVisible">Show Banner</label>
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
+                        Update Banner
+                    </button>
+                </form>
+            </div>
 
             <section className="card" style={{ marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Data Management</h2>

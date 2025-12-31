@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import NotificationBanner from "@/components/NotificationBanner";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -18,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <NotificationBanner />
         <Navbar />
         <main className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
           {children}
