@@ -146,8 +146,9 @@
 
 .attendees {
     font-size: 0.75rem;
-    color: hsl(var(--foreground));
-    opacity: 0.6;
+    color: #fcd34d;
+    /* Amber-300 / Yellow */
+    opacity: 1;
     margin-top: 0.25rem;
     line-height: 1.4;
 }
