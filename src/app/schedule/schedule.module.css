@@ -277,3 +277,36 @@
         font-size: 0.8rem;
     }
 }
+
+.pastDaysDetails {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+}
+
+.pastDaysSummary {
+    cursor: pointer;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+    padding: 0.5rem 0;
+    user-select: none;
+    list-style: none;
+    /* Hide default triangle in some browsers */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pastDaysSummary::marker {
+    display: none;
+}
+
+.pastDaysSummary:hover {
+    color: hsl(var(--foreground));
+}
+
+.pastDaysContent {
+    margin-top: 1rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--border);
+}

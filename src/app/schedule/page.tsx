@@ -115,98 +115,134 @@ export default async function SchedulePage({
                 <p className={styles.empty}>No scheduled activities.</p>
             ) : (
                 <div className={styles.timeline}>
-                    {Object.entries(grouped).map(([date, dayActivities]: [string, any]) => (
-                        <div key={date} className={styles.dayBlock}>
-                            <div className={styles.dateHeader}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                    <h2>{date}</h2>
-                                    {weatherMap.get(date) && (
-                                        <div className="weather-badge" style={{ fontSize: '1rem', background: 'rgba(255,255,255,0.7)', padding: '0.3rem 0.6rem', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                                            <span style={{ fontSize: '1.4rem' }}>{weatherMap.get(date)?.icon}</span>
-                                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                                                <span style={{ fontWeight: 'bold' }}>{weatherMap.get(date)?.max}°</span>
-                                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{weatherMap.get(date)?.min}°</span>
+                    {(() => {
+                        const now = new Date();
+                        const todayYYYYMMDD = new Intl.DateTimeFormat('en-CA', { timeZone: NY_TIMEZONE }).format(now);
+
+                        const allGroups = Object.entries(grouped);
+                        const pastGroups: [string, any][] = [];
+                        const upcomingGroups: [string, any][] = [];
+
+                        allGroups.forEach(([date, activities]: [string, any]) => {
+                            if (activities.length === 0) return;
+                            const activityDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: NY_TIMEZONE }).format(new Date(activities[0].date));
+                            if (activityDateStr < todayYYYYMMDD) {
+                                pastGroups.push([date, activities]);
+                            } else {
+                                upcomingGroups.push([date, activities]);
+                            }
+                        });
+
+
+                        const renderDay = ([date, dayActivities]: [string, any]) => (
+                            <div key={date} className={styles.dayBlock}>
+                                <div className={styles.dateHeader}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                        <h2>{date}</h2>
+                                        {weatherMap.get(date) && (
+                                            <div className="weather-badge" style={{ fontSize: '1rem', background: 'rgba(255,255,255,0.7)', padding: '0.3rem 0.6rem', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                                                <span style={{ fontSize: '1.4rem' }}>{weatherMap.get(date)?.icon}</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                                                    <span style={{ fontWeight: 'bold' }}>{weatherMap.get(date)?.max}°</span>
+                                                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{weatherMap.get(date)?.min}°</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className={styles.events}>
-                                {dayActivities.map((activity: any) => {
-                                    const isSignedUp = user ? activity.signups.some((s: any) => s.personId === userId) : false;
-                                    const isPast = new Date(activity.date) < new Date();
+                                <div className={styles.events}>
+                                    {dayActivities.map((activity: any) => {
+                                        const isSignedUp = user ? activity.signups.some((s: any) => s.personId === userId) : false;
+                                        const isPast = new Date(activity.date) < new Date();
 
-                                    return (
-                                        <div id={activity.id} key={activity.id} className={`${styles.event} card ${isSignedUp ? styles.signedUp : ''} ${isPast ? styles.past : styles.future}`}>
-                                            <div className={styles.timeSection}>
-                                                <div className={styles.time}>{formatTime(activity.date)}</div>
-                                                {activity.cost ? <div className={styles.costBadge}>${activity.cost}</div> : null}
-                                            </div>
-
-                                            <div className={styles.content}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                    <h3>{activity.icon} {activity.title}</h3>
-                                                    {user ? (
-                                                        <form action={async () => {
-                                                            'use server';
-                                                            if (!userId) return;
-                                                            if (isSignedUp) {
-                                                                await cancelSignup(activity.id, userId);
-                                                            } else {
-                                                                await signupForActivity(activity.id, userId);
-                                                            }
-                                                        }}>
-                                                            <button
-                                                                className={`btn ${isSignedUp ? styles.secondaryBtn : 'btn-primary'}`}
-                                                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                                                            >
-                                                                {isSignedUp ? '✅ Attending' : 'Join'}
-                                                            </button>
-                                                        </form>
-                                                    ) : (
-                                                        <Link
-                                                            href="/"
-                                                            style={{
-                                                                padding: '0.4rem 0.8rem',
-                                                                fontSize: '0.8rem',
-                                                                borderRadius: '0.5rem',
-                                                                background: 'rgba(255,255,255,0.1)',
-                                                                border: '1px solid rgba(255,255,255,0.2)',
-                                                                color: 'inherit',
-                                                                textDecoration: 'none',
-                                                                opacity: 0.8
-                                                            }}
-                                                        >
-                                                            Log in to Join
-                                                        </Link>
-                                                    )}
+                                        return (
+                                            <div id={activity.id} key={activity.id} className={`${styles.event} card ${isSignedUp ? styles.signedUp : ''} ${isPast ? styles.past : styles.future}`}>
+                                                <div className={styles.timeSection}>
+                                                    <div className={styles.time}>{formatTime(activity.date)}</div>
+                                                    {activity.cost ? <div className={styles.costBadge}>${activity.cost}</div> : null}
                                                 </div>
 
-                                                {activity.location && <p className={styles.location}>📍 {activity.location}</p>}
-                                                {activity.description && <p className={styles.desc}>{activity.description}</p>}
-
-                                                <div className={styles.footerInfo}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                        <span>👥 {activity.signups.length} going</span>
-                                                        {activity.venmoLink && (
-                                                            <a href={activity.venmoLink} target="_blank" rel="noopener noreferrer" className={styles.venmoLink}>
-                                                                💸 Pay via Venmo
-                                                            </a>
+                                                <div className={styles.content}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                        <h3>{activity.icon} {activity.title}</h3>
+                                                        {user ? (
+                                                            <form action={async () => {
+                                                                'use server';
+                                                                if (!userId) return;
+                                                                if (isSignedUp) {
+                                                                    await cancelSignup(activity.id, userId);
+                                                                } else {
+                                                                    await signupForActivity(activity.id, userId);
+                                                                }
+                                                            }}>
+                                                                <button
+                                                                    className={`btn ${isSignedUp ? styles.secondaryBtn : 'btn-primary'}`}
+                                                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                                                                >
+                                                                    {isSignedUp ? '✅ Attending' : 'Join'}
+                                                                </button>
+                                                            </form>
+                                                        ) : (
+                                                            <Link
+                                                                href="/"
+                                                                style={{
+                                                                    padding: '0.4rem 0.8rem',
+                                                                    fontSize: '0.8rem',
+                                                                    borderRadius: '0.5rem',
+                                                                    background: 'rgba(255,255,255,0.1)',
+                                                                    border: '1px solid rgba(255,255,255,0.2)',
+                                                                    color: 'inherit',
+                                                                    textDecoration: 'none',
+                                                                    opacity: 0.8
+                                                                }}
+                                                            >
+                                                                Log in to Join
+                                                            </Link>
                                                         )}
                                                     </div>
-                                                    {activity.signups.length > 0 && (
-                                                        <div className={styles.attendees}>
-                                                            {activity.signups.map((s: any) => s.person.name).join(', ')}
+
+                                                    {activity.location && <p className={styles.location}>📍 {activity.location}</p>}
+                                                    {activity.description && <p className={styles.desc}>{activity.description}</p>}
+
+                                                    <div className={styles.footerInfo}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                            <span>👥 {activity.signups.length} going</span>
+                                                            {activity.venmoLink && (
+                                                                <a href={activity.venmoLink} target="_blank" rel="noopener noreferrer" className={styles.venmoLink}>
+                                                                    💸 Pay via Venmo
+                                                                </a>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                        {activity.signups.length > 0 && (
+                                                            <div className={styles.attendees}>
+                                                                {activity.signups.map((s: any) => s.person.name).join(', ')}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+
+                        return (
+                            <>
+                                {pastGroups.length > 0 && (
+                                    <details className={styles.pastDaysDetails}>
+                                        <summary className={styles.pastDaysSummary}>
+                                            <span>▶ Previous Days ({pastGroups.length})</span>
+                                        </summary>
+                                        <div className={styles.pastDaysContent}>
+                                            {pastGroups.map(renderDay)}
+                                        </div>
+                                    </details>
+                                )}
+                                {upcomingGroups.map(renderDay)}
+                            </>
+                        );
+                    })()}
                 </div>
             )}
 
